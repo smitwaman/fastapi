@@ -1,42 +1,46 @@
-name: Python application
+name: Deploy FastAPI to Azure Web App
 
 on:
-  [push]
-
+  push:
+    branches:
+      - main
 
 permissions:
-      id-token: write
-      contents: read
-
-env:
-  AZURE_WEBAPP_NAME: my-app # set this to your application's name
-  AZURE_WEBAPP_PACKAGE_PATH: '.' # set this to the path to your web app project, defaults to the repository root
+  id-token: write
+  contents: read
 
 jobs:
-  build:
+  build-and-deploy:
     runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v4
-    
-    - uses: azure/login@v1
-      with:
-        client-id: ${{ secrets.AZURE_CLIENT_ID }}
-        tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-        subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-    - name: Set up Python 3.x
-      uses: actions/setup-python@v4
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Set up Python
+      uses: actions/setup-python@v2
       with:
-        python-version: 3.x
+        python-version: '3.9'
+
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
-    - name: Deploy web App using GH Action azure/webapps-deploy
-      uses: azure/webapps-deploy@v3
+
+    - name: Azure Login
+      uses: azure/login@v1
       with:
-        app-name: ${{ env.AZURE_WEBAPP_NAME }}
-        package: ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
-    - name: logout
-      run: |
-        az logout
+        client-id: ${{ secrets.AZURE_CLIENT_ID }}
+        tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+        subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+        allow-no-subscriptions: true
+
+    - name: Deploy to Azure Web App
+      uses: azure/webapps-deploy@v2
+      with:
+        app-name: 'your-web-app-name'
+        package: .
+        runtime-stack: 'PYTHON|3.9'
+
+    - name: Restart Azure Web App
+      run: az webapp restart --name your-web-app-name --resource-group your-resource-group
